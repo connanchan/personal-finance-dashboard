@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Personal Finance Command Dashboard</title>
+<style>
+body{font-family:Arial,sans-serif;padding:20px;max-width:1300px;margin:auto}
+h1,h2{text-align:center}
+.section{margin-bottom:30px}
+button{padding:6px 10px;margin-top:6px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px}
+th{background:#f2f2f2}
+.stat{font-weight:bold}
+.account{margin-bottom:6px}
+.milestone{border:1px solid #ddd;padding:8px;margin:6px 0}
+.progressbar{height:14px;background:#eee;margin-top:4px}
+.progressfill{height:14px;background:#4caf50}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js">
+
+/* ---------- LIFE GOAL TIMELINE ENGINE ---------- */
+let lifeGoals = JSON.parse(localStorage.getItem("lifeGoals")||"[]")
+
+function saveGoals(){
+localStorage.setItem("lifeGoals",JSON.stringify(lifeGoals))
+}
+
+function addLifeGoal(){
+const name = prompt("Goal name (ex: Engagement Ring)")
+if(!name) return
+
+const amount = parseFloat(prompt("Amount to spend"))
+if(!amount) return
+
+const year = parseInt(prompt("Year of purchase (ex: 2026)"))
+if(!year) return
+
+lifeGoals.push({name,amount,year})
+
+saveGoals()
+renderLifeGoals()
+}
+
+function renderLifeGoals(){
+const container = document.getElementById("lifeGoalList")
+if(!container) return
+
+container.innerHTML=""
+
+lifeGoals.forEach((g,i)=>{
+const row=document.createElement("div")
+
+row.innerHTML=`${g.name} • $${g.amount.toLocaleString()} • ${g.year} <button onclick="removeGoal(${i})">Remove</button>`
+
+container.appendChild(row)
+})
+}
+
+function removeGoal(i){
+lifeGoals.splice(i,1)
+saveGoals()
+renderLifeGoals()
+}
+
+function simulateNetWorthWithGoals(){
+const current=parseFloat(document.getElementById("netWorth").innerText)||0
+const rate=(parseFloat(document.getElementById("returnRate").value)||7)/100
+
+const monthly=projectedMonthlyInvest()
+
+let value=current
+let year=new Date().getFullYear()
+let ageSim=age
+
+let timeline=[]
+
+for(let y=0;y<30;y++){
+
+for(let m=0;m<12;m++){
+value+=monthly
+value*=1+(rate/12)
+}
+
+lifeGoals.forEach(g=>{
+if(g.year===year+y){
+value-=g.amount
+}
+})
+
+ageSim++
+
+timeline.push({year:year+y,age:ageSim,value})
+}
+
+return timeline
+}
+
+function renderGoalImpact(){
+const timeline=simulateNetWorthWithGoals()
+
+const container=document.getElementById("goalProjection")
+if(!container) return
+
+container.innerHTML=""
+
+for(let t of timeline.slice(0,10)){
+const row=document.createElement("div")
+row.innerHTML=`${t.year} (age ${t.age}) • projected net worth $${Math.round(t.value).toLocaleString()}`
+container.appendChild(row)
+}
+}
+
+/* UI INIT FOR GOALS */
+window.addEventListener("load",()=>{
+
+const section=document.createElement("div")
+section.className="section"
+
+section.innerHTML=`
+<h2>Life Goal Timeline</h2>
+<button onclick="addLifeGoal()">Add Goal</button>
+<div id="lifeGoalList"></div>
+<h3>Projection Impact</h3>
+<div id="goalProjection"></div>
+`
+
+document.body.insertBefore(section,document.body.children[6])
+
+renderLifeGoals()
+renderGoalImpact()
+})
+
+
+
+/* ---------- GOAL FUNDING TRACKER ---------- */
+
+function contributeToGoal(i){
+ const amt=parseFloat(prompt("Contribution amount"))
+ if(!amt) return
+ lifeGoals[i].saved=(lifeGoals[i].saved||0)+amt
+ saveGoals()
+ renderLifeGoals()
+ renderGoalImpact()
+}
+
+function renderLifeGoals(){
+ const container=document.getElementById("lifeGoalList")
+ if(!container) return
+
+ container.innerHTML=""
+
+ lifeGoals.forEach((g,i)=>{
+  if(!g.saved) g.saved=0
+
+  const remaining=Math.max(g.amount-g.saved,0)
+  const pct=Math.min((g.saved/g.amount)*100,100)
+
+  const row=document.createElement("div")
+  row.style.marginBottom="10px"
+
+  row.innerHTML=`
+   <b>${g.name}</b> • Target $${g.amount.toLocaleString()} • ${g.year}<br>
+   Saved: $${g.saved.toLocaleString()} / $${g.amount.toLocaleString()} (${pct.toFixed(0)}%)<br>
+   Remaining: $${remaining.toLocaleString()}<br>
+   <progress value="${g.saved}" max="${g.amount}" style="width:200px"></progress><br>
+   <button onclick="contributeToGoal(${i})">Add Contribution</button>
+   <button onclick="removeGoal(${i})">Remove</button>
+  `
+
+  container.appendChild(row)
+ })
+}
+
+function projectedMonthlySavings(){
+ if(typeof projectedMonthlyInvest === 'function'){
+   return projectedMonthlyInvest()
+ }
+ return 0
+}
+
+function estimateGoalFunding(i){
+ const g=lifeGoals[i]
+ const monthly=projectedMonthlySavings()
+
+ if(monthly<=0) return "unknown"
+
+ const remaining=Math.max(g.amount-(g.saved||0),0)
+ const months=Math.ceil(remaining/monthly)
+
+ const d=new Date()
+ d.setMonth(d.getMonth()+months)
+
+ return d.toLocaleDateString(undefined,{year:'numeric',month:'short'})
+}
+
+/* enhance UI with funding projection */
+function renderLifeGoals(){
+ const container=document.getElementById("lifeGoalList")
+ if(!container) return
+
+ container.innerHTML=""
+
+ lifeGoals.forEach((g,i)=>{
+  if(!g.saved) g.saved=0
+
+  const remaining=Math.max(g.amount-g.saved,0)
+  const pct=Math.min((g.saved/g.amount)*100,100)
+  const eta=estimateGoalFunding(i)
+
+  const row=document.createElement("div")
+  row.style.marginBottom="14px"
+
+  row.innerHTML=`
+   <b>${g.name}</b> • Target $${g.amount.toLocaleString()} • ${g.year}<br>
+   Saved: $${g.saved.toLocaleString()} / $${g.amount.toLocaleString()} (${pct.toFixed(0)}%)<br>
+   Remaining: $${remaining.toLocaleString()}<br>
+   Estimated funded by: ${eta}<br>
+   <progress value="${g.saved}" max="${g.amount}" style="width:220px"></progress><br>
+   <button onclick="contributeToGoal(${i})">Add Contribution</button>
+   <button onclick="removeGoal(${i})">Remove</button>
+  `
+
+  container.appendChild(row)
+ })
+}
+
+</script>
+</head>
+<body>
+
+<h1>Personal Finance Command Dashboard</h1>
+
+<div class="section">
+<h2>Projected Year-End Outcome</h2>
+<p>Projected Year-End Take Home: $<span id="projIncome">0</span></p>
+<p>Projected Year-End Savings: $<span id="projSavings">0</span></p>
+</div>
+
+<div class="section">
+<h2>Enter Paycheck (New Paychecks)</h2>
+<input type="number" id="paycheckInput" placeholder="Paycheck amount">
+<button onclick="addPaycheck()">Add Paycheck</button>
+<p>Total Pay Received YTD: $<span id="paycheckTotal">0</span></p>
+</div>
+
+<div class="section">
+<h2>Catch-up / Historical Data Entry (YTD)</h2>
+<p>This section is only for entering past income or spending to catch up the dashboard to your current year-to-date numbers.</p>
+<input type="number" id="historicalIncome" placeholder="Total YTD income">
+<button onclick="setHistoricalIncome()">Set YTD Income</button>
+<br><br>
+<input type="number" id="historicalSpend" placeholder="Total YTD spending">
+<button onclick="setHistoricalSpend()">Set YTD Spending</button>
+</div>
+
+<div class="section">
+<h2>Spending Categories</h2>
+<div id="categoryInputs"></div>
+<button onclick="addCategoryInput()">Add Category</button>
+<button onclick="updateCategories()">Update Categories</button>
+</div>
+
+<div class="section">
+<h2>Transactions</h2>
+<div id="transactionInputs"></div>
+<table>
+<thead>
+<tr><th>Category</th><th>Amount</th><th>Date</th></tr>
+</thead>
+<tbody id="logBody"></tbody>
+</table>
+</div>
+
+<div class="section">
+<h2>Cash Accounts (update monthly)</h2>
+<div id="cashAccounts"></div>
+<button onclick="addCashAccount()">Add Bank Account</button>
+</div>
+
+<div class="section">
+<h2>Investments</h2>
+TFSA $ <input type="number" id="tfsaInput">
+RRSP $ <input type="number" id="rrspInput">
+<button onclick="updateNetWorth()">Update Net Worth</button>
+<p class="stat">Current Net Worth: $<span id="netWorth">0</span></p>
+</div>
+
+<div class="section">
+<h2>Net Worth Projection & Target</h2>
+<label>Expected Market Return %</label>
+<input type="number" id="returnRate" value="7">
+
+<label>Manual Monthly Investment (optional)</label>
+<input type="number" id="manualInvest">
+
+<label>Target Net Worth</label>
+<input type="number" id="targetNW">
+
+<button onclick="runProjection()">Run Projection</button>
+
+<p>Years Until Target: <span id="targetYears"></span></p>
+<p>Age When Target Reached: <span id="targetAge"></span></p>
+</div>
+
+<div class="section">
+<h2>Net Worth Milestones</h2>
+<div id="milestones"></div>
+</div>
+
+<div class="section">
+<h2>Net Worth History</h2>
+<table>
+<thead>
+<tr><th>Date</th><th>Net Worth</th></tr>
+</thead>
+<tbody id="nwHistory"></tbody>
+</table>
+<canvas id="nwChart"></canvas>
+</div>
+
+<div class="section">
+<h2>Category Spend Dashboard</h2>
+<canvas id="categoryChart"></canvas>
+</div>
+
+<script>
+
+let paychecks=[]
+let paycheckDates=[]
+let categories=[]
+let transactions={}
+let nwHistory=[]
+let cashAccounts=[]
+
+const age=29
+
+function save(){
+localStorage.setItem("paychecks",JSON.stringify(paychecks))
+localStorage.setItem("paycheckDates",JSON.stringify(paycheckDates))
+localStorage.setItem("categories",JSON.stringify(categories))
+localStorage.setItem("transactions",JSON.stringify(transactions))
+localStorage.setItem("nwHistory",JSON.stringify(nwHistory))
+localStorage.setItem("cashAccounts",JSON.stringify(cashAccounts))
+localStorage.setItem("log",document.getElementById("logBody").innerHTML)
+localStorage.setItem("lastBalancePrompt",localStorage.getItem("lastBalancePrompt")||"")
+}
+
+function load(){
+paychecks=JSON.parse(localStorage.getItem("paychecks")||"[]")
+paycheckDates=JSON.parse(localStorage.getItem("paycheckDates")||"[]")
+categories=JSON.parse(localStorage.getItem("categories")||"[]")
+transactions=JSON.parse(localStorage.getItem("transactions")||"{}")
+nwHistory=JSON.parse(localStorage.getItem("nwHistory")||"[]")
+cashAccounts=JSON.parse(localStorage.getItem("cashAccounts")||"[]")
+
+if(localStorage.getItem("log"))
+document.getElementById("logBody").innerHTML=localStorage.getItem("log")
+}
+
+function monthlyBalancePrompt(){
+const now=new Date()
+const monthKey=now.getFullYear()+"-"+now.getMonth()
+
+const last=localStorage.getItem("lastBalancePrompt")
+
+if(last!==monthKey){
+alert("Monthly reminder: Update your bank balances, TFSA and RRSP values.")
+localStorage.setItem("lastBalancePrompt",monthKey)
+}
+}
+
+function setHistoricalIncome(){
+const val=parseFloat(document.getElementById("historicalIncome").value)
+if(!isNaN(val)&&val>=0){
+paychecks=[val]
+paycheckDates=["historical"]
+updateFinance()
+save()
+}
+}
+
+function setHistoricalSpend(){
+const val=parseFloat(document.getElementById("historicalSpend").value)
+if(!isNaN(val)&&val>=0){
+transactions={"Historical":[val]}
+updateFinance()
+save()
+}
+}
+
+function addPaycheck(){
+const val=parseFloat(document.getElementById("paycheckInput").value)
+if(!isNaN(val)&&val>0){
+paychecks.push(val)
+paycheckDates.push(new Date().toISOString())
+updateFinance()
+save()
+}
+}
+
+function totalIncome(){return paychecks.reduce((a,b)=>a+b,0)}
+
+function totalSpent(){
+let t=0
+Object.values(transactions).forEach(arr=>{
+t+=arr.reduce((a,b)=>a+b,0)
+})
+return t
+}
+
+function averageMonthlySavings(){
+const months=new Date().getMonth()+1
+if(months===0) return 0
+return (totalIncome()-totalSpent())/months
+}
+
+function projectedYearEndIncome(){
+const months=new Date().getMonth()+1
+const avg=totalIncome()/months
+return avg*12
+}
+
+function projectedYearEndSavings(){
+return averageMonthlySavings()*12
+}
+
+function updateFinance(){
+document.getElementById("paycheckTotal").innerText=totalIncome().toFixed(2)
+document.getElementById("projIncome").innerText=projectedYearEndIncome().toFixed(0)
+document.getElementById("projSavings").innerText=projectedYearEndSavings().toFixed(0)
+renderCharts()
+renderMilestones()
+}
+
+function addCategoryInput(name=""){
+const div=document.createElement("div")
+div.innerHTML=`Category: <input class='catName' value='${name}'> <button onclick='this.parentElement.remove()'>Remove</button>`
+document.getElementById("categoryInputs").appendChild(div)
+}
+
+function updateCategories(){
+categories=[]
+document.querySelectorAll(".catName").forEach(el=>{
+if(el.value.trim()) categories.push(el.value.trim())
+})
+renderTransactionInputs()
+save()
+}
+
+function renderTransactionInputs(){
+const container=document.getElementById("transactionInputs")
+container.innerHTML=""
+
+categories.forEach(cat=>{
+if(!transactions[cat]) transactions[cat]=[]
+
+const total=transactions[cat].reduce((a,b)=>a+b,0)
+
+const div=document.createElement("div")
+
+div.innerHTML=`${cat} <input type='number' id='${cat}_input'> <button onclick="addTransaction('${cat}')">Add</button> Total: $<span id='${cat}_total'>${total.toFixed(2)}</span>`
+
+container.appendChild(div)
+})
+}
+
+function addTransaction(cat){
+const val=parseFloat(document.getElementById(cat+"_input").value)
+
+if(!isNaN(val)&&val>0){
+transactions[cat].push(val)
+
+const row=document.getElementById("logBody").insertRow(0)
+row.insertCell(0).innerText=cat
+row.insertCell(1).innerText="$"+val.toFixed(2)
+row.insertCell(2).innerText=new Date().toLocaleString()
+
+const total=transactions[cat].reduce((a,b)=>a+b,0)
+document.getElementById(cat+"_total").innerText=total.toFixed(2)
+
+document.getElementById(cat+"_input").value=""
+
+updateFinance()
+save()
+}
+}
+
+function addCashAccount(name="",balance=0){
+cashAccounts.push({name,balance})
+renderCashAccounts()
+save()
+}
+
+function renderCashAccounts(){
+const div=document.getElementById("cashAccounts")
+div.innerHTML=""
+
+cashAccounts.forEach((a,i)=>{
+const row=document.createElement("div")
+row.className="account"
+row.innerHTML=`${a.name||'Account'} Balance <input value='${a.balance}' onchange="updateAccount(${i},this.value)">`
+
+div.appendChild(row)
+})
+}
+
+function updateAccount(i,val){
+cashAccounts[i].balance=parseFloat(val)||0
+updateNetWorth()
+save()
+}
+
+function totalCash(){
+return cashAccounts.reduce((a,b)=>a+(b.balance||0),0)
+}
+
+function updateNetWorth(){
+const tfsa=parseFloat(document.getElementById("tfsaInput").value)||0
+const rrsp=parseFloat(document.getElementById("rrspInput").value)||0
+
+const nw=tfsa+rrsp+totalCash()
+
+document.getElementById("netWorth").innerText=nw.toFixed(2)
+
+recordNetWorth(nw)
+save()
+renderMilestones()
+}
+
+function recordNetWorth(nw){
+const entry={date:new Date().toLocaleDateString(),value:nw}
+nwHistory.push(entry)
+renderNetWorthHistory()
+}
+
+function renderNetWorthHistory(){
+const table=document.getElementById("nwHistory")
+table.innerHTML=""
+
+const labels=[]
+const values=[]
+
+nwHistory.forEach(e=>{
+const row=document.createElement("tr")
+row.innerHTML=`<td>${e.date}</td><td>$${e.value}</td>`
+table.appendChild(row)
+labels.push(e.date)
+values.push(e.value)
+})
+
+const ctx=document.getElementById("nwChart").getContext("2d")
+
+if(window.nwChart) window.nwChart.destroy()
+
+window.nwChart=new Chart(ctx,{type:"line",data:{labels,datasets:[{label:"Net Worth",data:values}]}})
+}
+
+function projectedMonthlyInvest(){
+const manual=parseFloat(document.getElementById("manualInvest").value)
+if(!isNaN(manual)) return manual
+return averageMonthlySavings()
+}
+
+function yearsToTarget(target){
+const current=parseFloat(document.getElementById("netWorth").innerText)||0
+const rate=(parseFloat(document.getElementById("returnRate").value)||7)/100
+const monthly=projectedMonthlyInvest()
+
+let value=current
+let months=0
+
+while(value<target && months<2000){
+value+=monthly
+value*=1+(rate/12)
+months++
+}
+
+return months/12
+}
+
+function runProjection(){
+const target=parseFloat(document.getElementById("targetNW").value)
+if(!target) return
+
+const yrs=yearsToTarget(target)
+
+document.getElementById("targetYears").innerText=yrs.toFixed(1)
+document.getElementById("targetAge").innerText=(age+yrs).toFixed(1)
+
+renderMilestones()
+}
+
+function renderMilestones(){
+const nw=parseFloat(document.getElementById("netWorth").innerText)||0
+
+const targets=[100000,200000,300000,500000,1000000]
+
+const div=document.getElementById("milestones")
+div.innerHTML=""
+
+const rate=(parseFloat(document.getElementById("returnRate").value)||7)/100
+const monthly=projectedMonthlyInvest()
+
+for(let t of targets){
+
+const pct=Math.min((nw/t)*100,100)
+
+let yrs=""
+
+if(nw<t){
+yrs=yearsToTarget(t).toFixed(1)
+}
+
+const m=document.createElement("div")
+m.className="milestone"
+
+m.innerHTML=`
+<div>$${t.toLocaleString()}</div>
+<div class="progressbar"><div class="progressfill" style="width:${pct}%"></div></div>
+<div>${pct.toFixed(1)}% complete ${nw<t?"• ~"+yrs+" yrs remaining":"• reached"}</div>
+`
+
+div.appendChild(m)
+}
+}
+
+function renderCharts(){
+const ctx=document.getElementById("categoryChart").getContext("2d")
+
+const labels=[]
+const data=[]
+
+categories.forEach(cat=>{
+labels.push(cat)
+const t=(transactions[cat]||[]).reduce((a,b)=>a+b,0)
+data.push(t)
+})
+
+if(window.chart) window.chart.destroy()
+
+window.chart=new Chart(ctx,{type:"bar",data:{labels,datasets:[{label:"Spent",data}]}})
+}
+
+function init(){
+load()
+
+monthlyBalancePrompt()
+
+if(categories.length===0){
+addCategoryInput("Rent")
+addCategoryInput("Groceries")
+addCategoryInput("Transport")
+addCategoryInput("Eating Out")
+}else{
+categories.forEach(c=>addCategoryInput(c))
+}
+
+updateCategories()
+renderNetWorthHistory()
+renderCashAccounts()
+updateFinance()
+}
+
+init()
+
+</script>
+
+</body>
+</html>
