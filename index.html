@@ -1,74 +1,166 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Personal Finance Command Dashboard</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personal Finance Dashboard</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
-body{font-family:Arial;padding:20px;max-width:1200px;margin:auto}
-h1,h2{text-align:center}
-.section{margin-bottom:30px}
-button{padding:6px 10px;margin-top:6px}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px}
-th{background:#f2f2f2}
-.stat{font-weight:bold}
-.account{margin-bottom:6px}
-.progressbar{height:14px;background:#eee;margin-top:4px}
-.progressfill{height:14px;background:#4caf50}
+
+body{
+font-family:Arial, Helvetica, sans-serif;
+max-width:1100px;
+margin:auto;
+padding:16px;
+}
+
+h1,h2{
+text-align:center;
+}
+
+.section{
+margin-bottom:28px;
+padding:14px;
+border:1px solid #eee;
+border-radius:8px;
+}
+
+button{
+padding:10px 14px;
+margin-top:8px;
+cursor:pointer;
+border-radius:6px;
+border:1px solid #ccc;
+background:#f5f5f5;
+}
+
+input,select{
+padding:8px;
+margin-top:6px;
+margin-right:6px;
+border-radius:6px;
+border:1px solid #ccc;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:10px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:6px;
+font-size:14px;
+}
+
+th{
+background:#f0f0f0;
+}
+
+.progressbar{
+height:14px;
+background:#eee;
+border-radius:6px;
+}
+
+.progressfill{
+height:14px;
+background:#4caf50;
+border-radius:6px;
+}
+
+#loginPage{
+text-align:center;
+margin-top:120px;
+}
+
+/* MOBILE OPTIMIZATION */
+
+@media (max-width:700px){
+
+body{
+padding:10px;
+}
+
+.section{
+padding:10px;
+}
+
+input,select{
+width:100%;
+margin-bottom:6px;
+}
+
+button{
+width:100%;
+}
+
+th,td{
+font-size:12px;
+}
+
+}
+
 </style>
-
 </head>
-
 <body>
 
-<h1>Personal Finance Command Dashboard</h1>
+<!-- LOGIN PAGE -->
+
+<div id="loginPage">
+<h1>Personal Finance Dashboard</h1>
+<p>Please login</p>
+<button onclick="login()">Login with Google</button>
+</div>
+
+
+<!-- DASHBOARD -->
+
+<div id="dashboard" style="display:none">
+
+<h1>Finance Dashboard</h1>
+
+<p id="userStatus" style="text-align:center"></p>
 
 <div style="text-align:center;margin-bottom:20px">
-<button onclick="login()">Login with Google</button>
 <button onclick="logout()">Logout</button>
-<p id="userStatus">Not logged in</p>
 </div>
 
-<div class="section">
-<h2>Projected Year-End Outcome</h2>
-<p>Projected Year-End Take Home: $<span id="projIncome">0</span></p>
-<p>Projected Year-End Savings: $<span id="projSavings">0</span></p>
-</div>
 
 <div class="section">
-<h2>Enter Paycheck</h2>
-<input type="number" id="paycheckInput">
-<button onclick="addPaycheck()">Add Paycheck</button>
-<p>Total Pay Received YTD: $<span id="paycheckTotal">0</span></p>
-</div>
 
-<div class="section">
-<h2>Catch-up Data</h2>
+<h2>Add Paycheck</h2>
 
-<input type="number" id="historicalIncome" placeholder="Total YTD income">
-<button onclick="setHistoricalIncome()">Set YTD Income</button>
+<input id="payInput" type="number" placeholder="Paycheck amount">
+<button onclick="addPay()">Add</button>
 
-<br><br>
-
-<input type="number" id="historicalSpend" placeholder="Total YTD spending">
-<button onclick="setHistoricalSpend()">Set YTD Spending</button>
+<p>Total Income: $<span id="incomeTotal">0</span></p>
 
 </div>
 
-<div class="section">
-<h2>Spending Categories</h2>
-<div id="categoryInputs"></div>
-<button onclick="addCategoryInput()">Add Category</button>
-<button onclick="updateCategories()">Update</button>
-</div>
 
 <div class="section">
-<h2>Transactions</h2>
-<div id="transactionInputs"></div>
+
+<h2>Categories</h2>
+
+<div id="categoryList"></div>
+
+<input id="newCat" placeholder="New category">
+<button onclick="addCategory()">Add Category</button>
+
+</div>
+
+
+<div class="section">
+
+<h2>Add Spending</h2>
+
+<select id="catSelect"></select>
+
+<input id="spendInput" type="number" placeholder="Amount">
+
+<button onclick="addSpend()">Add</button>
 
 <table>
 <thead>
@@ -78,477 +170,238 @@ th{background:#f2f2f2}
 <th>Date</th>
 </tr>
 </thead>
-
-<tbody id="logBody"></tbody>
-</table>
-</div>
-
-<div class="section">
-<h2>Cash Accounts</h2>
-<div id="cashAccounts"></div>
-<button onclick="addCashAccount()">Add Bank Account</button>
-</div>
-
-<div class="section">
-<h2>Investments</h2>
-
-TFSA $ <input type="number" id="tfsaInput">
-RRSP $ <input type="number" id="rrspInput">
-
-<button onclick="updateNetWorth()">Update Net Worth</button>
-
-<p class="stat">Current Net Worth: $<span id="netWorth">0</span></p>
-
-</div>
-
-<div class="section">
-<h2>Net Worth Projection</h2>
-
-<label>Expected Return %</label>
-<input type="number" id="returnRate" value="7">
-
-<label>Monthly Investment</label>
-<input type="number" id="manualInvest">
-
-<label>Target Net Worth</label>
-<input type="number" id="targetNW">
-
-<button onclick="runProjection()">Run</button>
-
-<p>Years Until Target: <span id="targetYears"></span></p>
-<p>Age When Target Reached: <span id="targetAge"></span></p>
-
-</div>
-
-<div class="section">
-<h2>Milestones</h2>
-<div id="milestones"></div>
-</div>
-
-<div class="section">
-<h2>Net Worth History</h2>
-
-<table>
-<thead>
-<tr>
-<th>Date</th>
-<th>Net Worth</th>
-</tr>
-</thead>
-
-<tbody id="nwHistory"></tbody>
+<tbody id="log"></tbody>
 </table>
 
-<canvas id="nwChart"></canvas>
-
 </div>
+
 
 <div class="section">
-<h2>Category Spending</h2>
-<canvas id="categoryChart"></canvas>
+
+<h2>Net Worth</h2>
+
+<input id="tfsa" type="number" placeholder="TFSA">
+<input id="rrsp" type="number" placeholder="RRSP">
+<input id="cash" type="number" placeholder="Cash">
+
+<button onclick="updateNW()">Update Net Worth</button>
+
+<p>Net Worth: $<span id="nw">0</span></p>
+
 </div>
+
+
+<div class="section">
+
+<h2>Category Spending Chart</h2>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+</div>
+
 
 <script>
 
 let paychecks=[]
-let paycheckDates=[]
 let categories=[]
 let transactions={}
-let nwHistory=[]
-let cashAccounts=[]
+let netWorth=0
+let lastUpdated=0
 
-const age=29
 
 function saveLocal(){
 
 localStorage.setItem("paychecks",JSON.stringify(paychecks))
-localStorage.setItem("paycheckDates",JSON.stringify(paycheckDates))
 localStorage.setItem("categories",JSON.stringify(categories))
 localStorage.setItem("transactions",JSON.stringify(transactions))
-localStorage.setItem("nwHistory",JSON.stringify(nwHistory))
-localStorage.setItem("cashAccounts",JSON.stringify(cashAccounts))
+localStorage.setItem("netWorth",netWorth)
+localStorage.setItem("lastUpdated",lastUpdated)
 
 }
+
+
+function save(){
+
+lastUpdated=Date.now()
+
+saveLocal()
+
+if(window.saveCloud){
+window.saveCloud()
+}
+
+}
+
 
 function loadLocal(){
 
-paychecks=JSON.parse(localStorage.getItem("paychecks")||"[]")
-paycheckDates=JSON.parse(localStorage.getItem("paycheckDates")||"[]")
-categories=JSON.parse(localStorage.getItem("categories")||"[]")
-transactions=JSON.parse(localStorage.getItem("transactions")||"{}")
-nwHistory=JSON.parse(localStorage.getItem("nwHistory")||"[]")
-cashAccounts=JSON.parse(localStorage.getItem("cashAccounts")||"[]")
+paychecks=JSON.parse(localStorage.getItem("paychecks"))||[]
+categories=JSON.parse(localStorage.getItem("categories"))||[]
+transactions=JSON.parse(localStorage.getItem("transactions"))||{}
+netWorth=parseFloat(localStorage.getItem("netWorth"))||0
+lastUpdated=parseFloat(localStorage.getItem("lastUpdated"))||0
 
 }
 
-function save(){
-saveLocal()
-if(window.saveCloud) saveCloud()
-}
 
-function setHistoricalIncome(){
+function addPay(){
 
-const val=parseFloat(document.getElementById("historicalIncome").value)
+let v=parseFloat(document.getElementById("payInput").value)
 
-if(!isNaN(val)){
-paychecks=[val]
-updateFinance()
+if(!isNaN(v)){
+
+paychecks.push(v)
+
+update()
+
 save()
-}
 
 }
 
-function setHistoricalSpend(){
+}
 
-const val=parseFloat(document.getElementById("historicalSpend").value)
 
-if(!isNaN(val)){
-transactions={"Historical":[val]}
-updateFinance()
+function addCategory(){
+
+let c=document.getElementById("newCat").value
+
+if(!c) return
+
+categories.push(c)
+
+transactions[c]=[]
+
+renderCats()
+
 save()
-}
 
 }
 
-function addPaycheck(){
 
-const val=parseFloat(document.getElementById("paycheckInput").value)
+function renderCats(){
 
-if(!isNaN(val)){
-paychecks.push(val)
-paycheckDates.push(new Date().toISOString())
-updateFinance()
-save()
-}
+let div=document.getElementById("categoryList")
 
-}
+div.innerHTML=""
 
-function totalIncome(){
-return paychecks.reduce((a,b)=>a+b,0)
-}
+categories.forEach(c=>{
 
-function totalSpent(){
+let d=document.createElement("div")
 
-let t=0
+d.innerText=c
 
-Object.values(transactions).forEach(arr=>{
-t+=arr.reduce((a,b)=>a+b,0)
+div.appendChild(d)
+
 })
 
-return t
+let sel=document.getElementById("catSelect")
 
-}
+sel.innerHTML=""
 
-function averageMonthlySavings(){
+categories.forEach(c=>{
 
-const months=new Date().getMonth()+1
-return (totalIncome()-totalSpent())/months
+let o=document.createElement("option")
 
-}
+o.text=c
 
-function projectedYearEndIncome(){
+sel.add(o)
 
-const months=new Date().getMonth()+1
-return (totalIncome()/months)*12
-
-}
-
-function projectedYearEndSavings(){
-return averageMonthlySavings()*12
-}
-
-function updateFinance(){
-
-document.getElementById("paycheckTotal").innerText=totalIncome().toFixed(2)
-
-document.getElementById("projIncome").innerText=projectedYearEndIncome().toFixed(0)
-
-document.getElementById("projSavings").innerText=projectedYearEndSavings().toFixed(0)
-
-renderCharts()
-renderMilestones()
-
-}
-
-function addCategoryInput(name=""){
-
-const div=document.createElement("div")
-
-div.innerHTML=`Category <input class='catName' value='${name}'>`
-
-document.getElementById("categoryInputs").appendChild(div)
-
-}
-
-function updateCategories(){
-
-categories=[]
-
-document.querySelectorAll(".catName").forEach(el=>{
-if(el.value) categories.push(el.value)
 })
 
-renderTransactionInputs()
-save()
-
 }
 
-function renderTransactionInputs(){
 
-const container=document.getElementById("transactionInputs")
-container.innerHTML=""
+function addSpend(){
 
-categories.forEach(cat=>{
+let cat=document.getElementById("catSelect").value
+
+let amt=parseFloat(document.getElementById("spendInput").value)
 
 if(!transactions[cat]) transactions[cat]=[]
 
-const div=document.createElement("div")
+transactions[cat].push(amt)
 
-div.innerHTML=`
-${cat}
-<input type='number' id='${cat}_input'>
-<button onclick="addTransaction('${cat}')">Add</button>
-`
-
-container.appendChild(div)
-
-})
-
-}
-
-function addTransaction(cat){
-
-const val=parseFloat(document.getElementById(cat+"_input").value)
-
-if(!isNaN(val)){
-
-transactions[cat].push(val)
-
-const row=document.getElementById("logBody").insertRow(0)
+let row=document.getElementById("log").insertRow(0)
 
 row.insertCell(0).innerText=cat
-row.insertCell(1).innerText="$"+val
+row.insertCell(1).innerText="$"+amt
 row.insertCell(2).innerText=new Date().toLocaleString()
 
-updateFinance()
+update()
+
 save()
 
 }
 
+
+function totalIncome(){
+
+return paychecks.reduce((a,b)=>a+b,0)
+
 }
 
-function addCashAccount(){
 
-cashAccounts.push({name:"Account",balance:0})
+function update(){
 
-renderCashAccounts()
+document.getElementById("incomeTotal").innerText=totalIncome()
+
+renderChart()
+
+}
+
+
+function updateNW(){
+
+let tfsa=parseFloat(document.getElementById("tfsa").value)||0
+let rrsp=parseFloat(document.getElementById("rrsp").value)||0
+let cash=parseFloat(document.getElementById("cash").value)||0
+
+netWorth=tfsa+rrsp+cash
+
+document.getElementById("nw").innerText=netWorth
+
 save()
 
 }
 
-function renderCashAccounts(){
 
-const div=document.getElementById("cashAccounts")
-div.innerHTML=""
+function renderChart(){
 
-cashAccounts.forEach((a,i)=>{
+let labels=[]
+let data=[]
 
-const row=document.createElement("div")
+categories.forEach(c=>{
 
-row.innerHTML=`${a.name} Balance
-<input value="${a.balance}" onchange="updateAccount(${i},this.value)">`
+labels.push(c)
 
-div.appendChild(row)
+data.push((transactions[c]||[]).reduce((a,b)=>a+b,0))
 
 })
 
-}
-
-function updateAccount(i,val){
-
-cashAccounts[i].balance=parseFloat(val)||0
-updateNetWorth()
-save()
-
-}
-
-function totalCash(){
-return cashAccounts.reduce((a,b)=>a+b.balance,0)
-}
-
-function updateNetWorth(){
-
-const tfsa=parseFloat(document.getElementById("tfsaInput").value)||0
-const rrsp=parseFloat(document.getElementById("rrspInput").value)||0
-
-const nw=tfsa+rrsp+totalCash()
-
-document.getElementById("netWorth").innerText=nw
-
-nwHistory.push({date:new Date().toLocaleDateString(),value:nw})
-
-renderNetWorthHistory()
-save()
-
-}
-
-function renderNetWorthHistory(){
-
-const table=document.getElementById("nwHistory")
-table.innerHTML=""
-
-const labels=[]
-const values=[]
-
-nwHistory.forEach(e=>{
-
-const row=document.createElement("tr")
-row.innerHTML=`<td>${e.date}</td><td>$${e.value}</td>`
-table.appendChild(row)
-
-labels.push(e.date)
-values.push(e.value)
-
-})
-
-if(labels.length==0) return
-
-const ctx=document.getElementById("nwChart")
-
-if(window.nwChart) window.nwChart.destroy()
-
-window.nwChart=new Chart(ctx,{
-type:"line",
-data:{labels,datasets:[{label:"Net Worth",data:values}]}
-})
-
-}
-
-function projectedMonthlyInvest(){
-
-const manual=parseFloat(document.getElementById("manualInvest").value)
-
-if(!isNaN(manual)) return manual
-
-return averageMonthlySavings()
-
-}
-
-function yearsToTarget(target){
-
-let value=parseFloat(document.getElementById("netWorth").innerText)||0
-
-const rate=(parseFloat(document.getElementById("returnRate").value)||7)/100
-const monthly=projectedMonthlyInvest()
-
-let months=0
-
-while(value<target && months<2000){
-
-value+=monthly
-value*=1+(rate/12)
-months++
-
-}
-
-return months/12
-
-}
-
-function runProjection(){
-
-const target=parseFloat(document.getElementById("targetNW").value)
-
-const yrs=yearsToTarget(target)
-
-document.getElementById("targetYears").innerText=yrs.toFixed(1)
-
-document.getElementById("targetAge").innerText=(age+yrs).toFixed(1)
-
-}
-
-function renderMilestones(){
-
-const nw=parseFloat(document.getElementById("netWorth").innerText)||0
-
-const targets=[100000,200000,500000,1000000]
-
-const div=document.getElementById("milestones")
-div.innerHTML=""
-
-targets.forEach(t=>{
-
-const pct=Math.min((nw/t)*100,100)
-
-const row=document.createElement("div")
-
-row.innerHTML=`
-<b>$${t.toLocaleString()}</b>
-<div class="progressbar">
-<div class="progressfill" style="width:${pct}%"></div>
-</div>
-${pct.toFixed(1)}%
-`
-
-div.appendChild(row)
-
-})
-
-}
-
-function renderCharts(){
-
-const labels=[]
-const data=[]
-
-categories.forEach(cat=>{
-labels.push(cat)
-data.push((transactions[cat]||[]).reduce((a,b)=>a+b,0))
-})
-
-if(labels.length==0) return
-
-const ctx=document.getElementById("categoryChart")
+let ctx=document.getElementById("chart")
 
 if(window.chart) window.chart.destroy()
 
 window.chart=new Chart(ctx,{
 type:"bar",
-data:{labels,datasets:[{label:"Spent",data}]}
+data:{labels,datasets:[{label:"Spending",data}]}
 })
 
 }
 
-function init(){
 
 loadLocal()
-
-if(categories.length===0){
-
-addCategoryInput("Rent")
-addCategoryInput("Groceries")
-addCategoryInput("Transport")
-
-}else{
-
-categories.forEach(c=>addCategoryInput(c))
-
-}
-
-updateCategories()
-renderCashAccounts()
-renderNetWorthHistory()
-updateFinance()
-
-}
-
-init()
+renderCats()
+update()
 
 </script>
 
+
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js"
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"
 
 import {
 getAuth,
@@ -556,27 +409,39 @@ GoogleAuthProvider,
 signInWithPopup,
 signOut,
 onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js"
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js"
 
 import {
 getFirestore,
 doc,
 setDoc,
 getDoc
-} from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js"
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"
+
 
 const firebaseConfig={
+
 apiKey:"AIzaSyAmyvGEgkcCH-nJpKSpp3IKsGmzpPFm0vs",
+
 authDomain:"personal-finance-dashboa-a6862.firebaseapp.com",
+
 projectId:"personal-finance-dashboa-a6862",
-storageBucket:"personal-finance-dashboa-a6862.firebasestorage.app",
+
+storageBucket:"personal-finance-dashboa-a6862.appspot.com",
+
 messagingSenderId:"85821532999",
+
 appId:"1:85821532999:web:3c4d8b8213844be0a8ba62"
+
 }
 
+
 const app=initializeApp(firebaseConfig)
+
 const auth=getAuth(app)
+
 const db=getFirestore(app)
+
 
 window.login=async()=>{
 
@@ -586,59 +451,85 @@ await signInWithPopup(auth,provider)
 
 }
 
+
 window.logout=async()=>{
 
 await signOut(auth)
 
 }
 
+
 onAuthStateChanged(auth,async user=>{
 
 if(user){
 
+document.getElementById("loginPage").style.display="none"
+
+document.getElementById("dashboard").style.display="block"
+
 document.getElementById("userStatus").innerText="Logged in: "+user.email
+
 
 const ref=doc(db,"users",user.uid)
 
 const snap=await getDoc(ref)
 
+
 if(snap.exists()){
 
 const data=snap.data()
 
-paychecks=data.paychecks||[]
-paycheckDates=data.paycheckDates||[]
-categories=data.categories||[]
-transactions=data.transactions||{}
-nwHistory=data.nwHistory||[]
-cashAccounts=data.cashAccounts||[]
+if(data.lastUpdated>lastUpdated){
 
-init()
+paychecks=data.paychecks||[]
+
+categories=data.categories||[]
+
+transactions=data.transactions||{}
+
+netWorth=data.netWorth||0
+
+lastUpdated=data.lastUpdated||0
+
+renderCats()
+
+update()
 
 }
+
+}
+
 
 window.saveCloud=async()=>{
 
 await setDoc(doc(db,"users",user.uid),{
+
 paychecks,
-paycheckDates,
+
 categories,
+
 transactions,
-nwHistory,
-cashAccounts
+
+netWorth,
+
+lastUpdated
+
 })
 
 }
 
 }else{
 
-document.getElementById("userStatus").innerText="Not logged in"
+document.getElementById("loginPage").style.display="block"
+
+document.getElementById("dashboard").style.display="none"
 
 }
 
 })
 
 </script>
+
 
 </body>
 </html>
